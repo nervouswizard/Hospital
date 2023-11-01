@@ -10,6 +10,6 @@
 8:2拆分訓練資料、測試資料放在data/1_preprocess
 
 跑run.py
-(需要使用https://github.com/nervouswizard/ct-value的程式)
+(需要使用https://github.com/nervouswizard/ct-value)
 
 跑training_model.py可以執行DNN
