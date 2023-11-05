@@ -29,7 +29,7 @@ class NB15Dataset(Dataset):
         return len(self.data)
 
 class DNN(nn.Module):
-    def __init__(self, input_dim=47):
+    def __init__(self, input_dim=72):
         super(DNN, self).__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, input_dim),
@@ -63,13 +63,15 @@ def get_device():
     return device
 
 # 設定參數
-type_name = 'trim_p'
-train_file_path = os.path.join('data', '9_trim', 'p-value', 'train.csv')
-test_file_path = os.path.join('data', '9_trim', 'p-value', 'test.csv')
+type_name = 'ct'
+# train_file_path = os.path.join('data', '1_preprocess', 'train.csv')
+# test_file_path = os.path.join('data', '1_preprocess', 'test.csv')
+train_file_path = os.path.join('data', '3_DataWithPvalue', 'ct-value', 'train.csv')
+test_file_path = os.path.join('data', '6_mapped_test', 'benign_test.csv')
 device = get_device()
 model = DNN().to(device)
 criterion = nn.BCELoss()
-optimizer = optim.RAdam(model.parameters(), lr=0.00001)
+optimizer = optim.RAdam(model.parameters(), lr=0.000001)
 batch_size = 256
 num_epoch = 100
 save_path = os.path.join('result', type_name+'_'+str(num_epoch))
