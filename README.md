@@ -1,27 +1,24 @@
 # Hospital
-檔案放在data/0_ori
+檔案放在data/0_ori  
+先跑preprocess.py  
 
-先跑preprocess.py
+前處理:  
+刪除無用ID特徵ID、dead相關特徵   
+min-max normalize  
 
-前處理:
-刪除無用ID特徵ID、dead相關特徵 
-* 原始資料
-	原始特徵：
-	生:死 = 589848:14765
-	平衡後：
-	生:死 = 14765:14765
-	訓練集：
-	生:死 = 11816:11808
-	測試集：
-	生:死 = 2957:2949
+原始特徵：  
+生:死 = 589848:14765  
+平衡後：  
+生:死 = 14765:14765  
+訓練集：  
+生:死 = 11816:11808  
+測試集：  
+生:死 = 2957:2949  
 
-min-max normalize
+處理好的資料儲存在data/0_ori/preprocessed  
+8:2拆分訓練資料、測試資料放在data/1_preprocess  
 
-處理好的資料儲存在data/0_ori/preprocessed
-
-8:2拆分訓練資料、測試資料放在data/1_preprocess
-
-跑run.py
-(需要使用https://github.com/nervouswizard/ct-value)
+跑run.py  
+(需要使用https://github.com/nervouswizard/ct-value)  
 
 跑training_model.py可以執行DNN
