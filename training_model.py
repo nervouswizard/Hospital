@@ -9,6 +9,7 @@ from torcheval.metrics import BinaryAccuracy
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
 import seaborn as sns
 
 # 關閉隨機性
@@ -71,7 +72,7 @@ test_file_path = os.path.join('data', '6_mapped_test', 'benign_test.csv')
 device = get_device()
 model = DNN().to(device)
 criterion = nn.BCELoss()
-optimizer = optim.RAdam(model.parameters(), lr=0.000001)
+optimizer = optim.RAdam(model.parameters(), lr=0.00001)
 batch_size = 256
 num_epoch = 100
 save_path = os.path.join('result', type_name+'_'+str(num_epoch))
@@ -81,6 +82,7 @@ def train_model(train_loader, val_loader):
     print("Starting Training...")
     best_epoch = 0
     best_acc = 0.0
+    loss_record = {'train': [], 'dev': []}
     for epoch in range(num_epoch):
         train_acc = 0.0
         train_loss = 0.0
@@ -100,6 +102,7 @@ def train_model(train_loader, val_loader):
             optimizer.step()
             train_loss += batch_loss.item()
             train_acc = acc.update(outputs, labels).compute().item()
+            loss_record['train'].append(batch_loss.item())
         train_loss = train_loss/len(train_loader)
 
         # validation
@@ -114,6 +117,7 @@ def train_model(train_loader, val_loader):
                 val_loss += batch_loss.item()
                 val_acc = acc.update(outputs, labels).compute().item()
         val_loss = val_loss/len(val_loader)
+        loss_record['dev'].append(val_loss)
 
         print('[{}/{}] Train Acc:{:1.6f} Loss:{:1.6f} | Val Acc:{:1.6f} Loss:{:1.6f}'.format(
                 epoch+1, num_epoch, train_acc, train_loss, val_acc, val_loss))
@@ -126,16 +130,17 @@ def train_model(train_loader, val_loader):
         else:
             print("Last best model at Epoch: {}".format(best_epoch))
 
-        with open(os.path.join(save_path, f'{type_name}_train.txt'), 'w') as f:
+        with open(os.path.join(save_path, 'train.txt'), 'w') as f:
             f.write('Epoch: {}/{} Acc={:1.6f} Loss={:1.6f} Best Epoch={} Best Acc={:1.6f}\n'.format(epoch+1, num_epoch, train_acc, train_loss, best_epoch, best_acc)) 
-        with open(os.path.join(save_path, f'{type_name}_train_acc.txt'), 'a') as f:
+        with open(os.path.join(save_path, 'train_acc.txt'), 'a') as f:
             f.write(f"{train_acc}\n")
-        with open(os.path.join(save_path, f'{type_name}_train_loss.txt'), 'a') as f:
+        with open(os.path.join(save_path, 'train_loss.txt'), 'a') as f:
             f.write(f"{train_loss}\n")
-        with open(os.path.join(save_path, f'{type_name}_valid_acc.txt'), 'a') as f:
+        with open(os.path.join(save_path, 'valid_acc.txt'), 'a') as f:
             f.write(f"{val_acc}\n")
-        with open(os.path.join(save_path, f'{type_name}_valid_loss.txt'), 'a') as f:
+        with open(os.path.join(save_path, 'valid_loss.txt'), 'a') as f:
             f.write(f"{val_loss}\n")
+    return loss_record
 
 def DNN_preprocess():
     print('Loading data ...')
@@ -159,7 +164,7 @@ def DNN_preprocess():
     print("validate_set: ", len(val_set))
     print("validate_loader: ", len(val_loader))
 
-    train_model(train_loader, val_loader)
+    return train_model(train_loader, val_loader)
 
 def load_test():
     print('Loading data ...')
@@ -194,17 +199,17 @@ def calculate_f1(cm, test_y, preds):
         f.write(f"True Negative Rate (TNR) : {TNR}\n")
         f.write('\n')
         
-def draw_confusion_matrix(test_y, preds, t):
+def draw_confusion_matrix(test_y, preds):
     cm=confusion_matrix(test_y, preds)
     calculate_f1(cm, test_y, preds)
     plt.figure(figsize=(8,8))
-    plt.title(t)
+    plt.title(type_name)
     sns.heatmap(cm,square=True,annot=True,fmt='d',linecolor='white',cmap='Greens',linewidths=1.5,cbar=False)
     plt.xlabel('Pred',fontsize=20)
     plt.ylabel('True',fontsize=20)
-    plt.savefig(os.path.join(save_path, f"{t}.png"))
+    plt.savefig(os.path.join(save_path, "confusion_matrix.png"))
 
-def predict(test_loader, t):
+def predict(test_loader):
     acc = BinaryAccuracy(threshold = 0.5, device=device)
     tmodel = torch.load(os.path.join(save_path, 'model', 'model')) 
     tmodel.eval()
@@ -219,19 +224,37 @@ def predict(test_loader, t):
             test_acc = acc.update(outputs, labels).compute().item()
     print('Acc: {:1.6f}'.format(test_acc))
     preds = torch.cat(preds, dim=0).numpy()
-    with open(os.path.join(save_path, f'pred_{t}.csv'), 'w') as f:
+    with open(os.path.join(save_path, 'pred.csv'), 'w') as f:
         f.write("Id,pred\n")
         for i, p in enumerate(preds):
             f.write(f'{i},{p}\n')
     with open(os.path.join(save_path, 'test_acc.txt'), 'a') as f:
-        f.write(f"{t} : \nAcc : {test_acc}\n")
+        f.write(f"{type_name} : \nAcc : {test_acc}\n")
     return np.where(preds < 0.5, 0, 1)
+
+def draw_loss():
+    '''Plot learning curve of your DNN (train & dev loss)'''
+    total_steps = len(loss_record['train'])
+    x1 = range(total_steps)
+    x2 = x1[::len(loss_record['train']) // len(loss_record['dev'])]
+    figure(figsize=(6, 4))
+    plt.plot(x1, loss_record['train'], c='tab:red', label='train')
+    plt.plot(x2, loss_record['dev'], c='tab:cyan', label='dev')
+    plt.ylim(0.0, 1.0)
+    plt.xlabel('Training steps')
+    plt.ylabel('BCE loss')
+    plt.title('Learning curve of {}'.format(type_name))
+    plt.legend()
+    plt.savefig(os.path.join(save_path, "loss.png"))
 
 if __name__ == '__main__':
     # train
-    DNN_preprocess()
+    loss_record = DNN_preprocess()
 
     # test
     test_y, test_loader = load_test()
-    preds = predict(test_loader, type_name)
-    draw_confusion_matrix(test_y, preds, type_name)
+    preds = predict(test_loader)
+
+    #draw
+    draw_confusion_matrix(test_y, preds)
+    draw_loss()
