@@ -67,24 +67,26 @@ def preprocess(filepath, savepath, filename):
     dataframe.rename(columns={'Finally dead':'label'}, inplace=True)
     dataframe['label']=dataframe['label'].astype('int')
 
+    # 平衡label 
+
+    # random選取label為0的 
+    # balanced_df = random_select(dataframe)
+    # 選取採樣資料內 0比較少的
+
+    # 會增加一個欄位 : zero 
+    balanced_df = antizero_select(dataframe)
+    del dataframe
+
     # column rename
-    columns = dataframe.columns.tolist()
+    columns = balanced_df.columns.tolist()
     for i, col in enumerate(columns):
         try:
             columns[i] = col.replace('/', '.')
         except:
             pass
 
-    # 平衡label 
-    # random選取label為0的 
-    # balanced_df = random_select(dataframe)
-    # 選取採樣資料內 0比較少的
-    # 會增加一個欄位 : zero 
-    balanced_df = antizero_select(dataframe)
-    del dataframe
-
     # 將label移至最後面
-    columns = balanced_df.columns.tolist()
+    balanced_df.columns = columns
     columns.remove('label')
     columns.append('label')
     balanced_df = balanced_df[columns]
