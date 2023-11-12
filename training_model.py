@@ -13,8 +13,8 @@ from matplotlib.pyplot import figure
 import seaborn as sns
 
 # 關閉隨機性
-seed = 42
-shuffle = False
+seed = 4222
+shuffle = True
 torch.manual_seed(seed)
 np.random.seed(seed)
 
@@ -36,12 +36,15 @@ class DNN(nn.Module):
             nn.Linear(input_dim, input_dim),
             nn.BatchNorm1d(input_dim),
             nn.LeakyReLU(),
+            nn.Dropout(p=0.4),
             nn.Linear(input_dim, input_dim),
             nn.BatchNorm1d(input_dim),
             nn.LeakyReLU(),
+            nn.Dropout(p=0.4),
             nn.Linear(input_dim, input_dim),
             nn.BatchNorm1d(input_dim),
             nn.LeakyReLU(),
+            nn.Dropout(p=0.4),
             nn.Linear(input_dim, 1),
             nn.Sigmoid()
         )
@@ -64,19 +67,19 @@ def get_device():
     return device
 
 # 設定參數
-type_name = 'ct'
-# train_file_path = os.path.join('data', '1_preprocess', 'train.csv')
-# test_file_path = os.path.join('data', '1_preprocess', 'test.csv')
-train_file_path = os.path.join('data', '3_DataWithPvalue', 'ct-value', 'train.csv')
-test_file_path = os.path.join('data', '6_mapped_test', 'benign_test.csv')
+type_name = 'ori'
+train_file_path = os.path.join('data', '1_preprocess', 'train.csv')
+test_file_path = os.path.join('data', '1_preprocess', 'test.csv')
+# type_name = 'ct'
+# train_file_path = os.path.join('data', '3_DataWithPvalue', 'ct-value', 'train.csv')
+# test_file_path = os.path.join('data', '6_mapped_test', 'benign_test.csv')
 device = get_device()
 model = DNN().to(device)
 criterion = nn.BCELoss()
 optimizer = optim.RAdam(model.parameters(), lr=0.00001)
 batch_size = 256
-num_epoch = 100
+num_epoch = 1000
 save_path = os.path.join('result', type_name+'_'+str(num_epoch))
-os.makedirs(os.path.join(save_path, 'model'), exist_ok=True)
 
 def train_model(train_loader, val_loader):
     print("Starting Training...")
@@ -205,9 +208,10 @@ def draw_confusion_matrix(test_y, preds):
     plt.figure(figsize=(8,8))
     plt.title(type_name)
     sns.heatmap(cm,square=True,annot=True,fmt='d',linecolor='white',cmap='Greens',linewidths=1.5,cbar=False)
-    plt.xlabel('Pred',fontsize=20)
-    plt.ylabel('True',fontsize=20)
+    plt.xlabel('predicted value',fontsize=20)
+    plt.ylabel('ground truth value',fontsize=20)
     plt.savefig(os.path.join(save_path, "confusion_matrix.png"))
+    plt.close('all')
 
 def predict(test_loader):
     acc = BinaryAccuracy(threshold = 0.5, device=device)
@@ -230,14 +234,14 @@ def predict(test_loader):
             f.write(f'{i},{p}\n')
     with open(os.path.join(save_path, 'test_acc.txt'), 'a') as f:
         f.write(f"{type_name} : \nAcc : {test_acc}\n")
-    return np.where(preds < 0.5, 0, 1)
+    return preds
 
 def draw_loss():
     '''Plot learning curve of your DNN (train & dev loss)'''
     total_steps = len(loss_record['train'])
     x1 = range(total_steps)
     x2 = x1[::len(loss_record['train']) // len(loss_record['dev'])]
-    figure(figsize=(6, 4))
+    figure(figsize=(18, 12))
     plt.plot(x1, loss_record['train'], c='tab:red', label='train')
     plt.plot(x2, loss_record['dev'], c='tab:cyan', label='dev')
     plt.ylim(0.0, 1.0)
@@ -246,15 +250,37 @@ def draw_loss():
     plt.title('Learning curve of {}'.format(type_name))
     plt.legend()
     plt.savefig(os.path.join(save_path, "loss.png"))
+    plt.close('all')
+
+def draw_pred(min = -0.1, mix = 1.1, targets=None, preds=None):
+    ''' Plot prediction of your DNN '''
+    figure(figsize=(5, 5))
+    plt.scatter(targets, preds, c='r', alpha=0.01)
+    plt.plot([min, mix], [0.5, 0.5], c='b')
+    plt.plot([0.5, 0.5], [min, mix], c='b')
+    plt.xlim(min, mix)
+    plt.ylim(min, mix)
+    plt.xlabel('ground truth value')
+    plt.ylabel('predicted value')
+    plt.title('Ground Truth v.s. Prediction')
+    plt.savefig(os.path.join(save_path, "pred.png"))
+    plt.close('all')
 
 if __name__ == '__main__':
+    # 刪除舊資料夾
+
+    # 創建資料夾
+    os.makedirs(os.path.join(save_path, 'model'), exist_ok=True)
+
     # train
     loss_record = DNN_preprocess()
+
+    draw_loss()
 
     # test
     test_y, test_loader = load_test()
     preds = predict(test_loader)
 
     #draw
-    draw_confusion_matrix(test_y, preds)
-    draw_loss()
+    draw_confusion_matrix(test_y, np.where(preds < 0.5, 0, 1))
+    draw_pred(targets = test_y, preds = preds)

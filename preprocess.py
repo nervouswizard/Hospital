@@ -86,7 +86,7 @@ print(balanced_normalized_df.info())
 print(balanced_normalized_df['label'].value_counts())
 
 #分割訓練、測試
-train_df, test_df = train_test_split(balanced_normalized_df, test_size=0.2, random_state=42)
+train_df, test_df = train_test_split(balanced_normalized_df, test_size=0.2, random_state=4123)
 
 # 確認資料型態
 print('training set')
