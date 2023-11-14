@@ -30,7 +30,7 @@ class NB15Dataset(Dataset):
         return len(self.data)
 
 class DNN(nn.Module):
-    def __init__(self, input_dim=72):
+    def __init__(self, input_dim=73):
         super(DNN, self).__init__()
         self.fc = nn.Sequential(
             nn.Linear(input_dim, input_dim),
@@ -78,7 +78,7 @@ model = DNN().to(device)
 criterion = nn.BCELoss()
 optimizer = optim.RAdam(model.parameters(), lr=0.00001)
 batch_size = 256
-num_epoch = 1000
+num_epoch = 100
 save_path = os.path.join('result', type_name+'_'+str(num_epoch))
 
 def train_model(train_loader, val_loader):
@@ -244,7 +244,7 @@ def draw_loss():
     figure(figsize=(18, 12))
     plt.plot(x1, loss_record['train'], c='tab:red', label='train')
     plt.plot(x2, loss_record['dev'], c='tab:cyan', label='dev')
-    plt.ylim(0.0, 1.0)
+    plt.ylim(0.0, 0.1)
     plt.xlabel('Training steps')
     plt.ylabel('BCE loss')
     plt.title('Learning curve of {}'.format(type_name))

@@ -23,8 +23,9 @@ def antizero_select(df):
     df1_zero_percentage = (df1 == 0).sum(axis=1) / df1.shape[1]
     df0['zero'] = df0_zero_percentage
     df1['zero'] = df1_zero_percentage
+    last = df0.tail(df0.shape[0]-df1.shape[0])
     df0 = df0.head(df1.shape[0])
-    return pd.concat([df0, df1])
+    return pd.concat([df0, df1]), last
 
 def preprocess(filepath, savepath, filename):
     dataframe = pd.read_csv(os.path.join(filepath, filename), encoding = "ISO-8859-1")
@@ -67,18 +68,8 @@ def preprocess(filepath, savepath, filename):
     dataframe.rename(columns={'Finally dead':'label'}, inplace=True)
     dataframe['label']=dataframe['label'].astype('int')
 
-    # 平衡label 
-
-    # random選取label為0的 
-    # balanced_df = random_select(dataframe)
-    # 選取採樣資料內 0比較少的
-
-    # 會增加一個欄位 : zero 
-    balanced_df = antizero_select(dataframe)
-    del dataframe
-
     # column rename
-    columns = balanced_df.columns.tolist()
+    columns = dataframe.columns.tolist()
     for i, col in enumerate(columns):
         try:
             columns[i] = col.replace('/', '.')
@@ -86,37 +77,51 @@ def preprocess(filepath, savepath, filename):
             pass
 
     # 將label移至最後面
-    balanced_df.columns = columns
+    dataframe.columns = columns
     columns.remove('label')
     columns.append('label')
-    balanced_df = balanced_df[columns]
+    dataframe = dataframe[columns]
 
     # label 取出
-    df_label = balanced_df['label']
-    balanced_df.drop(columns=['label'], inplace=True)
+    df_label = dataframe['label']
+    dataframe.drop(columns=['label'], inplace=True)
 
     # 计算每个列的最小值和最大值
-    min_values = balanced_df.min()
-    max_values = balanced_df.max()
+    min_values = dataframe.min()
+    max_values = dataframe.max()
 
     # Min-Max 标准化到 0~1 范围
-    balanced_normalized_df = (balanced_df - min_values) / (max_values - min_values)
+    normalized_df = (dataframe - min_values) / (max_values - min_values)
+    del dataframe
 
     # label 放回
-    balanced_normalized_df['label'] = df_label
+    normalized_df['label'] = df_label
 
     # 確認資料型態
-    print('balanced set')
-    print(balanced_normalized_df.info())
-    print(balanced_normalized_df['label'].value_counts())
+    print('normalized dataframe')
+    print(normalized_df.info())
+    print(normalized_df['label'].value_counts())
+
+    # 平衡label 
+
+    # random選取label為0的 
+    # balanced_df = random_select(dataframe)
+    # 選取採樣資料內 0比較少的
+
+    # 會增加一個欄位 : zero 
+    balanced_df, last_df = antizero_select(normalized_df)
+    del normalized_df
 
     #分割訓練、測試
-    train_df, test_df = train_test_split(balanced_normalized_df, test_size=0.2, random_state=seed)
+    train_df, test_df = train_test_split(balanced_df, test_size=0.2, random_state=seed)
+    test_df = pd.concat([test_df, last_df])
 
     # 確認資料型態
     print('training set')
+    print(train_df.shape)
     print(train_df['label'].value_counts())
     print('testing set')
+    print(test_df.shape)
     print(test_df['label'].value_counts())
 
     # 儲存
