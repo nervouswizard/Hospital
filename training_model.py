@@ -67,18 +67,18 @@ def get_device():
     return device
 
 # 設定參數
-type_name = 'ori'
-train_file_path = os.path.join('data', '1_preprocess', 'train.csv')
-test_file_path = os.path.join('data', '1_preprocess', 'test.csv')
-# type_name = 'ct'
-# train_file_path = os.path.join('data', '3_DataWithPvalue', 'ct-value', 'train.csv')
-# test_file_path = os.path.join('data', '6_mapped_test', 'benign_test.csv')
+# type_name = 'ori'
+# train_file_path = os.path.join('data', '1_preprocess', 'train.csv')
+# test_file_path = os.path.join('data', '1_preprocess', 'test.csv')
+type_name = 'ct'
+train_file_path = os.path.join('data', '3_DataWithPvalue', 'ct-value', 'train.csv')
+test_file_path = os.path.join('data', '6_mapped_test', 'benign_test.csv')
 device = get_device()
 model = DNN().to(device)
 criterion = nn.BCELoss()
 optimizer = optim.RAdam(model.parameters(), lr=0.00001)
 batch_size = 256
-num_epoch = 100
+num_epoch = 1000
 save_path = os.path.join('result', type_name+'_'+str(num_epoch))
 
 def train_model(train_loader, val_loader):
@@ -244,7 +244,7 @@ def draw_loss():
     figure(figsize=(18, 12))
     plt.plot(x1, loss_record['train'], c='tab:red', label='train')
     plt.plot(x2, loss_record['dev'], c='tab:cyan', label='dev')
-    plt.ylim(0.0, 0.1)
+    plt.ylim(0.0, 1.0)
     plt.xlabel('Training steps')
     plt.ylabel('BCE loss')
     plt.title('Learning curve of {}'.format(type_name))

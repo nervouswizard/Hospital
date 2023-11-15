@@ -1,17 +1,26 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import os
 
 def _plot(dataframe, savepath, t):
     zero_percentage = (dataframe == 0).sum(axis=1) / dataframe.shape[1]
-    zero_percentage = zero_percentage.sort_values()
+    zero_percentage = zero_percentage.sort_values().tolist()
+
+    # 將機率分成10個區間
+    num_bins = 10
+    hist, bins = np.histogram(zero_percentage, bins=num_bins, range=(0,1))
+    print(hist, bins)
+
+    # 區間中心
+    bin_centers = (bins[:-1] + bins[1:]) / 2
 
     # 繪製圖表
-    plt.figure(figsize=(10, 5))
-    plt.plot(range(dataframe.shape[0]), zero_percentage * 100, color='blue')
-    plt.xlabel('Row Index')
-    plt.ylabel('Percentage of Zeros')
-    plt.title(f'Accumulated percentage of Zeros in Each Row (Label == {t})')
+    plt.figure(figsize=(10, 10))
+    plt.bar(bin_centers, hist, width=(bins[1] - bins[0])*0.8, color='blue', alpha=0.7)
+    plt.xlabel('Zero percentage')
+    plt.ylabel('Numbers')
+    plt.title(f'Histogram of data zero_percentage (Label is {t})')
     plt.savefig(os.path.join(savepath, f'label{t}.png'))
 
 def plot_zero_persentage(dataframe, savepath):

@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 import os, random
 from observe import _plot
@@ -11,18 +10,29 @@ random.seed(seed)
 np.random.seed(seed)
 
 def random_select(df):
-    label_0_indices = df[df['label'] == 0].index.tolist()
-    label_1_indices = df[df['label'] == 1].index.tolist()
+    df0 = df[df['label'] == 0].copy()
+    df0_zero_percentage = ((df0 == 0).sum(axis=1)-1) / df0.shape[1]
+    df0['zero'] = df0_zero_percentage
+    df1 = df[df['label'] == 1].copy()
+    df1_zero_percentage = (df1 == 0).sum(axis=1) / df1.shape[1]
+    df1['zero'] = df1_zero_percentage
+
+    label_0_indices = df0.index.tolist()
+    label_1_indices = df1.index.tolist()
     random_indices = random.sample(label_0_indices, len(label_1_indices))
-    return pd.concat([df.loc[random_indices], df.loc[label_1_indices]])
+    return pd.concat([df0[df0.index.isin(random_indices)], df1]), df0[~df0.index.isin(random_indices)]
 
 def antizero_select(df):
     df0 = df[df['label'] == 0].copy()
-    df1 = df[df['label'] == 1].copy()
-    df0_zero_percentage = (df0 == 0).sum(axis=1)-1 / df0.shape[1]
-    df1_zero_percentage = (df1 == 0).sum(axis=1) / df1.shape[1]
+    _plot(df0, '', '0')
+    df0_zero_percentage = ((df0 == 0).sum(axis=1)-1) / df0.shape[1]
     df0['zero'] = df0_zero_percentage
+    
+    df1 = df[df['label'] == 1].copy()
+    _plot(df1, '', '1')
+    df1_zero_percentage = (df1 == 0).sum(axis=1) / df1.shape[1]
     df1['zero'] = df1_zero_percentage
+
     last = df0.tail(df0.shape[0]-df1.shape[0])
     df0 = df0.head(df1.shape[0])
     return pd.concat([df0, df1]), last
@@ -30,6 +40,7 @@ def antizero_select(df):
 def preprocess(filepath, savepath, filename):
     dataframe = pd.read_csv(os.path.join(filepath, filename), encoding = "ISO-8859-1")
     dataframe.fillna(value=0, inplace=True)
+    print(dataframe.shape)
 
     # 特徵選擇
     print("----------preprocess-----------")
@@ -105,11 +116,11 @@ def preprocess(filepath, savepath, filename):
     # 平衡label 
 
     # random選取label為0的 
-    # balanced_df = random_select(dataframe)
-    # 選取採樣資料內 0比較少的
+    balanced_df, last_df = random_select(normalized_df)
 
+    # 選取採樣資料內 0比較少的
     # 會增加一個欄位 : zero 
-    balanced_df, last_df = antizero_select(normalized_df)
+    # balanced_df, last_df = antizero_select(normalized_df)
     del normalized_df
 
     #分割訓練、測試
