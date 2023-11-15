@@ -10,6 +10,7 @@ import os
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
 
 from training_model import type_name, batch_size, save_path, device, test_file_path, NB15Dataset, DNN
 
@@ -46,17 +47,17 @@ def calculate_f1(cm, test_y, preds):
         f.write(f"True Negative Rate (TNR) : {TNR}\n")
         f.write('\n')
         
-def draw_confusion_matrix(test_y, preds, t):
+def draw_confusion_matrix(test_y, preds):
     cm=confusion_matrix(test_y, preds)
     calculate_f1(cm, test_y, preds)
     plt.figure(figsize=(8,8))
-    plt.title(t)
+    plt.title(type_name)
     sns.heatmap(cm,square=True,annot=True,fmt='d',linecolor='white',cmap='Greens',linewidths=1.5,cbar=False)
     plt.xlabel('Pred',fontsize=20)
     plt.ylabel('True',fontsize=20)
-    plt.savefig(os.path.join(save_path, f"{t}.png"))
+    plt.savefig(os.path.join(save_path, "confusion_matrix.png"))
 
-def predict(test_loader, t):
+def predict(test_loader):
     acc = BinaryAccuracy(threshold = 0.5, device=device)
     tmodel = torch.load(os.path.join(save_path, 'model', 'model')) 
     tmodel.eval()
@@ -71,15 +72,32 @@ def predict(test_loader, t):
             test_acc = acc.update(outputs, labels).compute().item()
     print('Acc: {:1.6f}'.format(test_acc))
     preds = torch.cat(preds, dim=0).numpy()
-    with open(os.path.join(save_path, f'pred_{t}.csv'), 'w') as f:
+    with open(os.path.join(save_path, 'pred.csv'), 'w') as f:
         f.write("Id,pred\n")
         for i, p in enumerate(preds):
             f.write(f'{i},{p}\n')
     with open(os.path.join(save_path, 'test_acc.txt'), 'a') as f:
-        f.write(f"{t} : \nAcc : {test_acc}\n")
-    return np.where(preds < 0.5, 0, 1)
+        f.write(f"{type_name} : \nAcc : {test_acc}\n")
+    return preds
+
+def draw_pred(min = -0.1, mix = 1.1, targets=None, preds=None):
+    ''' Plot prediction of your DNN '''
+    figure(figsize=(5, 5))
+    plt.scatter(targets, preds, c='r', alpha=0.01)
+    plt.plot([min, mix], [0.5, 0.5], c='b')
+    plt.plot([0.5, 0.5], [min, mix], c='b')
+    plt.xlim(min, mix)
+    plt.ylim(min, mix)
+    plt.xlabel('ground truth value')
+    plt.ylabel('predicted value')
+    plt.title('Ground Truth v.s. Prediction')
+    plt.savefig(os.path.join(save_path, "pred.png"))
+    plt.close('all')
 
 if __name__ == '__main__':    
     test_y, test_loader = load_test()
-    preds = predict(test_loader, type_name)
-    draw_confusion_matrix(test_y, preds, type_name)
+    preds = predict(test_loader)
+
+    #draw
+    draw_confusion_matrix(test_y, np.where(preds < 0.5, 0, 1))
+    draw_pred(targets = test_y, preds = preds)
