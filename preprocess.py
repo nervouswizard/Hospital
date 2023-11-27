@@ -23,24 +23,59 @@ def random_select(df):
     return pd.concat([df0[df0.index.isin(random_indices)], df1]), df0[~df0.index.isin(random_indices)]
 
 def antizero_select(df):
+    # label為0的資料集
     df0 = df[df['label'] == 0].copy()
+    # 畫圖
     _plot(df0, '', '0')
+    # 將 zero precentage 放入資料集
     df0_zero_percentage = ((df0 == 0).sum(axis=1)-1) / df0.shape[1]
     df0['zero'] = df0_zero_percentage
+    
+    # 將label移至最後面
+    columns = df0.columns.tolist()
+    columns.remove('label')
+    columns.append('label')
+    df0 = df0[columns]
+
+    # 依zero precentage排序
+    df0 = df0.sort_values(by='zero')
+    # 將zero precentage分成10個區間
+    num_bins = 10
+    hist, bins = np.histogram(df0_zero_percentage, bins=num_bins, range=(0,1))
+    df0_split = {}
+    last_idx = 0
+    for i in range(len(hist)):
+        if hist[i] == 0: continue
+        df0_split[round(bins[i], 1)] = df0[last_idx:last_idx+hist[i]]
+        last_idx += hist[i]
+
+    num_even = 2587
+    df0_split[0.4] = df0_split[0.4].sample(n=num_even)
+    df0_split[0.5] = df0_split[0.5].sample(n=num_even)
+    df0_split[0.6] = df0_split[0.6].sample(n=num_even)
+    df0_split[0.7] = df0_split[0.7].sample(n=num_even)
+
+    sampled_data = pd.concat([df0_split[i/10] for i in range(2,10)])
+    last = df0[~df0.index.isin(sampled_data.index)]
+    del df0
+
     
     df1 = df[df['label'] == 1].copy()
     _plot(df1, '', '1')
     df1_zero_percentage = (df1 == 0).sum(axis=1) / df1.shape[1]
     df1['zero'] = df1_zero_percentage
 
-    last = df0.tail(df0.shape[0]-df1.shape[0])
-    df0 = df0.head(df1.shape[0])
-    return pd.concat([df0, df1]), last
+    # 將label移至最後面
+    columns = df1.columns.tolist()
+    columns.remove('label')
+    columns.append('label')
+    df1 = df1[columns]
+
+    return pd.concat([sampled_data, df1]), last
 
 def preprocess(filepath, savepath, filename):
     dataframe = pd.read_csv(os.path.join(filepath, filename), encoding = "ISO-8859-1")
     dataframe.fillna(value=0, inplace=True)
-    print(dataframe.shape)
 
     # 特徵選擇
     print("----------preprocess-----------")
@@ -116,11 +151,10 @@ def preprocess(filepath, savepath, filename):
     # 平衡label 
 
     # random選取label為0的 
-    balanced_df, last_df = random_select(normalized_df)
+    # balanced_df, last_df = random_select(normalized_df)
 
-    # 選取採樣資料內 0比較少的
-    # 會增加一個欄位 : zero 
-    # balanced_df, last_df = antizero_select(normalized_df)
+    # 選取採樣資料內0比較少的, 會增加一個欄位 : zero 
+    balanced_df, last_df = antizero_select(normalized_df)
     del normalized_df
 
     #分割訓練、測試

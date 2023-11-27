@@ -67,12 +67,12 @@ def get_device():
     return device
 
 # 設定參數
-# type_name = 'ori'
-# train_file_path = os.path.join('data', '1_preprocess', 'train.csv')
-# test_file_path = os.path.join('data', '1_preprocess', 'test.csv')
-type_name = 'ct'
-train_file_path = os.path.join('data', '3_DataWithPvalue', 'ct-value', 'train.csv')
-test_file_path = os.path.join('data', '6_mapped_test', 'benign_test.csv')
+type_name = 'ori'
+train_file_path = os.path.join('data', '1_preprocess', 'train.csv')
+test_file_path = os.path.join('data', '1_preprocess', 'test.csv')
+# type_name = 'ct'
+# train_file_path = os.path.join('data', '3_DataWithPvalue', 'ct-value', 'train.csv')
+# test_file_path = os.path.join('data', '6_mapped_test', 'benign_test.csv')
 device = get_device()
 model = DNN().to(device)
 criterion = nn.BCELoss()
