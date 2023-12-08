@@ -9,24 +9,13 @@ seed = 4222
 random.seed(seed)
 np.random.seed(seed)
 
-def random_select(df):
-    df0 = df[df['label'] == 0].copy()
-    df0_zero_percentage = ((df0 == 0).sum(axis=1)-1) / df0.shape[1]
-    df0['zero'] = df0_zero_percentage
-    df1 = df[df['label'] == 1].copy()
-    df1_zero_percentage = (df1 == 0).sum(axis=1) / df1.shape[1]
-    df1['zero'] = df1_zero_percentage
-
+def random_select(df0, df1):
     label_0_indices = df0.index.tolist()
     label_1_indices = df1.index.tolist()
     random_indices = random.sample(label_0_indices, len(label_1_indices))
     return pd.concat([df0[df0.index.isin(random_indices)], df1]), df0[~df0.index.isin(random_indices)]
 
-def antizero_select(df):
-    # label為0的資料集
-    df0 = df[df['label'] == 0].copy()
-    # 畫圖
-    _plot(df0, '', '0')
+def antizero_select(df0, df1):
     # 將 zero precentage 放入資料集
     df0_zero_percentage = ((df0 == 0).sum(axis=1)-1) / df0.shape[1]
     df0['zero'] = df0_zero_percentage
@@ -59,9 +48,6 @@ def antizero_select(df):
     last = df0[~df0.index.isin(sampled_data.index)]
     del df0
 
-    
-    df1 = df[df['label'] == 1].copy()
-    _plot(df1, '', '1')
     df1_zero_percentage = (df1 == 0).sum(axis=1) / df1.shape[1]
     df1['zero'] = df1_zero_percentage
 
@@ -72,6 +58,22 @@ def antizero_select(df):
     df1 = df1[columns]
 
     return pd.concat([sampled_data, df1]), last
+
+def label_balance(df, savepath,t = 'random'):
+    os.makedirs(savepath, exist_ok=True)
+    # label為0的資料集
+    df0 = df[df['label'] == 0].copy()
+    df1 = df[df['label'] == 1].copy()
+
+    _plot(df0, savepath, '0')
+    _plot(df1, savepath, '1')
+
+    # random選取label為0的, 不會增加欄位
+    if t == 'random':
+        return random_select(df0, df1)
+    # 選取採樣資料內0比較少的, 會增加一個欄位 : zero 
+    elif t == 'antizero':
+        return antizero_select(df0, df1)
 
 def preprocess(filepath, savepath, filename):
     dataframe = pd.read_csv(os.path.join(filepath, filename), encoding = "ISO-8859-1")
@@ -148,13 +150,12 @@ def preprocess(filepath, savepath, filename):
     print(normalized_df.info())
     print(normalized_df['label'].value_counts())
 
-    # 平衡label 
+    # 儲存
+    os.makedirs(os.path.join(filepath, 'preprocessed'), exist_ok=True)
+    normalized_df.to_csv(os.path.join(filepath, 'preprocessed', filename), index=None)
 
-    # random選取label為0的 
-    # balanced_df, last_df = random_select(normalized_df)
-
-    # 選取採樣資料內0比較少的, 會增加一個欄位 : zero 
-    balanced_df, last_df = antizero_select(normalized_df)
+    # 平衡label
+    balanced_df, last_df = label_balance(normalized_df, os.path.join(filepath, 'histogram'), 'random')
     del normalized_df
 
     #分割訓練、測試

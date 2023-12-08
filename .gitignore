@@ -6,6 +6,8 @@ result/
 
 ct_value/
 
+trained_generators/
+
 *.csv
 
 /run.py
